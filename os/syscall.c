@@ -39,6 +39,29 @@ uint64 sys_gettimeofday(TimeVal *val, int _tz)
 /*
 * LAB1: you may need to define sys_trace here
 */
+uint64 sys_trace(int trace_request, unsigned long id, uint8 data)
+{
+    struct proc *p = curr_proc();
+    
+    if (trace_request == 0) {
+        // 读取 id 地址处的一个字节
+        uint8 *ptr = (uint8 *)id;
+        return *ptr;
+    } else if (trace_request == 1) {
+        // 写入 data 到 id 地址处
+        uint8 *ptr = (uint8 *)id;
+        *ptr = data;
+        return 0;
+    } else if (trace_request == 2) {
+        // 查询系统调用次数
+        if (id < MAX_SYSCALL_NUM) {
+            return p->syscall_times[id];
+        }
+        return -1;
+    }
+    
+    return -1;
+}
 
 extern char trap_page[];
 
@@ -53,6 +76,9 @@ void syscall()
 	/*
 	* LAB1: you may need to update syscall counter here
 	*/
+	if (id >= 0 && id < MAX_SYSCALL_NUM) {
+        curr_proc()->syscall_times[id]++;
+    }
 	switch (id) {
 	case SYS_write:
 		ret = sys_write(args[0], (char *)args[1], args[2]);
@@ -69,6 +95,9 @@ void syscall()
 	/*
 	* LAB1: you may need to add SYS_trace case here
 	*/
+	case SYS_trace:
+        ret = sys_trace((int)args[0], (unsigned long)args[1], (uint8)args[2]);
+        break;
 	default:
 		ret = -1;
 		errorf("unknown syscall %d", id);
